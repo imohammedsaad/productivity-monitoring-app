@@ -1,0 +1,13 @@
+opencv-python
+flask
+streamlit
+numpy
+pandas
+requests
+matplotlib
+scikit-learn
+Pillow
+sqlalchemy
+ultralytics
+deep_sort_realtime
+torch
