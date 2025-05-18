@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitoring Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navbar -->
+    <nav class="bg-blue-700 shadow sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <!-- Heroicon: Chart Bar -->
+                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 17V9m-5 8V5m-5 12v-6"></path>
+                </svg>
+                <span class="text-white text-xl font-bold tracking-wide">Monitoring Dashboard</span>
+            </div>
+            <span id="liveClock" class="text-white font-mono"></span>
+        </div>
+    </nav>
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Top Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Alerts -->
+            <div class="bg-white rounded-xl shadow p-4">
+                <div class="flex items-center mb-2 text-red-600 font-semibold">
+                    <!-- Heroicon: Exclamation -->
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z"/>
+                    </svg>
+                    Alerts
+                </div>
+                <ul>
+                    {% if alerts %}
+                        {% for alert in alerts %}
+                        <li class="flex items-center py-1 text-sm">
+                            {% if 'idle' in alert['type'] %}
+                                <span class="text-yellow-500 mr-2">&#x23F3;</span>
+                            {% elif 'unauthorized' in alert['type'] %}
+                                <span class="text-red-500 mr-2">&#9888;</span>
+                            {% elif 'capacity' in alert['type'] %}
+                                <span class="text-blue-500 mr-2">&#128101;</span>
+                            {% else %}
+                                <span class="text-gray-400 mr-2">&#9432;</span>
+                            {% endif %}
+                            <span>{{ alert['message'] }}</span>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="text-gray-400">No alerts</li>
+                    {% endif %}
+                </ul>
+            </div>
+            <!-- stat.zone Stats -->
+            <div class="bg-white rounded-xl shadow p-4">
+                <div class="flex items-center mb-2 text-blue-600 font-semibold">
+                    <!-- Heroicon: Location Marker -->
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 11c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4.5 8-10a8 8 0 10-16 0c0 5.5 8 10 8 10z"/>
+                    </svg>
+                    zone Stats
+                </div>
+                <ul>
+                    {% if stats %}
+                        {% for stat in stats %}
+    <li class="flex items-center py-1 text-sm">
+        <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+            {% if 'desk' in stat.zone|lower %}bg-green-100 text-green-700
+            {% elif 'meeting' in stat.zone|lower %}bg-blue-100 text-blue-700
+            {% elif 'break' in stat.zone|lower %}bg-yellow-100 text-yellow-700
+            {% else %}bg-gray-200 text-gray-700{% endif %} mr-2">
+            {{ stat.zone }}
+        </span>
+        <span>{{ stat.count }}</span>
+    </li>
+{% endfor %}
+                    {% else %}
+                        <li class="text-gray-400">No data</li>
+                    {% endif %}
+                </ul>
+            </div>
+            <!-- Person Selector & Summary -->
+            <div class="bg-white rounded-xl shadow p-4">
+                <div class="flex items-center mb-2 text-green-600 font-semibold">
+                    <!-- Heroicon: User -->
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A9 9 0 1112 21a9 9 0 01-6.879-3.196z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Select Person
+                </div>
+                <form method="get">
+                    <select name="person_id" class="w-full rounded border-gray-300 mb-2" onchange="this.form.submit()">
+                        <option value="">-- Select --</option>
+                        {% for contact in contacts %}
+                        <option value="{{ contact['person_id'] }}" {% if person_id == contact['person_id']|string %}selected{% endif %}>
+                            {{ contact['name'] }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+                {% if productive_hours %}
+                <div class="bg-gray-50 rounded p-2 mt-2 text-sm">
+                    <div class="flex items-center mb-1">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-700 font-bold mr-2">
+                            {% set person = contacts | selectattr('id', 'equalto', person_id|int) | list | first %}
+                            {% if person %}
+                                {{ person['name'][0]|upper }}
+                            {% else %}
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A9 9 0 1112 21a9 9 0 01-6.879-3.196z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            {% endif %}
+                        </span>
+                        <span class="font-semibold">
+                            {% if person %}{{ person['name'] }}{% else %}ID: {{ person_id }}{% endif %}
+                        </span>
+                    </div>
+                    <div class="mb-1">
+                        <span class="font-medium text-gray-600">Productive Hours:</span>
+                        <span class="ml-1">{{ productive_hours['productive_hours'] }}</span>
+                        <div class="w-full bg-gray-200 rounded h-2 mt-1">
+                            <div class="bg-green-400 h-2 rounded" style="width: {{ (productive_hours['productive_hours'] / 8 * 100) if productive_hours['productive_hours'] < 8 else 100 }}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-1">
+                        <span class="font-medium text-gray-600">Meeting Hours:</span>
+                        <span class="ml-1">{{ meeting_hours['meeting_hours'] }}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-600">Break Minutes:</span>
+                        <span class="ml-1">{{ break_times['break_minutes'] }}</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-gray-400">Select a person to view details.</div>
+                {% endif %}
+            </div>
+        </div>
+        <!-- Map Name & Phone to Person ID -->
+        <div class="bg-white rounded-xl shadow p-4 mt-6">
+            <div class="flex items-center mb-2 text-blue-600 font-semibold">
+                <!-- Heroicon: Pencil -->
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h6" />
+                </svg>
+                Map Name & Phone to Person ID
+            </div>
+            <form method="post" action="/map_person" class="space-y-2">
+                <input type="text" name="person_id" placeholder="Person ID (number)" class="w-full rounded border-gray-300 px-2 py-1" required>
+                <input type="text" name="name" placeholder="Name" class="w-full rounded border-gray-300 px-2 py-1" required>
+                <input type="text" name="phone" placeholder="Phone Number" class="w-full rounded border-gray-300 px-2 py-1">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded">Map</button>
+            </form>
+            {% if map_success is defined %}
+                <div class="mt-2 text-green-600 text-sm">Mapping saved!</div>
+            {% elif map_error is defined %}
+                <div class="mt-2 text-red-600 text-sm">Failed to save mapping.</div>
+            {% endif %}
+        </div>
+        <!-- User Status -->
+        <div class="bg-white rounded-xl shadow p-4 mt-6">
+            <h2 class="text-lg font-semibold mb-2">User Status</h2>
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr>
+                        <th class="px-2 py-1">Person</th>
+                        <th class="px-2 py-1">Zone</th>
+                        <th class="px-2 py-1">Status</th>
+                        <th class="px-2 py-1">Last Seen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for s in statuses %}
+                    <tr>
+                        <td class="px-2 py-1">{{ s.name or s.person_id }}</td>
+                        <td class="px-2 py-1">{{ s.zone }}</td>
+                        <td class="px-2 py-1">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold
+                                {% if s.status == 'active' %}bg-green-100 text-green-700
+                                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                {{ s.status|capitalize }}
+                            </span>
+                        </td>
+                        <td class="px-2 py-1">{{ s.last_seen }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-gradient-to-r from-green-100 to-green-50 rounded-xl shadow p-6 flex flex-col items-center">
+                <svg class="w-8 h-8 text-green-500 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+                <div class="text-gray-700">Total People Detected</div>
+                <div class="text-2xl font-bold">{{ contacts|length }}</div>
+            </div>
+            <div class="bg-gradient-to-r from-blue-100 to-blue-50 rounded-xl shadow p-6 flex flex-col items-center">
+                <svg class="w-8 h-8 text-blue-500 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-6a2 2 0 012-2h2a2 2 0 012 2v6"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 17v-4a4 4 0 014-4h2a4 4 0 014 4v4"/>
+                </svg>
+                <div class="text-gray-700">Zones Monitored</div>
+                <div class="text-2xl font-bold">{{ stats|length }}</div>
+            </div>
+            <div class="bg-gradient-to-r from-yellow-100 to-yellow-50 rounded-xl shadow p-6 flex flex-col items-center">
+                <svg class="w-8 h-8 text-yellow-500 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 19a7 7 0 100-14 7 7 0 000 14z"/>
+                </svg>
+                <div class="text-gray-700">Recent Logs</div>
+                <div class="text-2xl font-bold">{{ logs|length }}</div>
+            </div>
+        </div>
+        <!-- Recent Logs Table -->
+        <div class="bg-white rounded-xl shadow p-4">
+            <div class="flex items-center mb-3 text-gray-700 font-semibold">
+                <!-- Heroicon: List -->
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                Recent Logs
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
+                            <th class="py-2 px-3 text-left">Time</th>
+                            <th class="py-2 px-3 text-left">Person</th>
+                            <th class="py-2 px-3 text-left">zone</th>
+                            <th class="py-2 px-3 text-left">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs[-10:] %}
+                        <tr class="border-b last:border-0">
+                            <td class="py-2 px-3">{{ log['timestamp'] }}</td>
+                            <td class="py-2 px-3 flex items-center">
+                                {% set person = contacts | selectattr('id', 'equalto', log['person_id']) | list | first %}
+                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-200 text-gray-700 font-bold mr-2">
+                                    {% if person %}
+                                        {{ person['name'][0]|upper }}
+                                    {% else %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A9 9 0 1112 21a9 9 0 01-6.879-3.196z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                    {% endif %}
+                                </span>
+                                {% if person %}
+                                    {{ person['name'] }}
+                                {% else %}
+                                    {{ log['person_id'] }}
+                                {% endif %}
+                            </td>
+                            <td class="py-2 px-3">
+                                <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                                    {% if 'desk' in log['zone']|lower %}bg-green-100 text-green-700
+                                    {% elif 'meeting' in log['zone']|lower %}bg-blue-100 text-blue-700
+                                    {% elif 'break' in log['zone']|lower %}bg-yellow-100 text-yellow-700
+                                    {% else %}bg-gray-200 text-gray-700{% endif %}">
+                                    {{ log['zone'] }}
+                                </span>
+                            </td>
+                            <td class="py-2 px-3">{{ log['event'] }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-gray-400 py-4">No logs available.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <footer class="mt-10 text-center text-gray-400 text-sm">
+            &copy; {{ 2025 }} Real-Time Monitoring System &mdash; Powered by Flask & Tailwind CSS
+        </footer>
+    </main>
+    <script>
+        // Live clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('liveClock').textContent =
+                now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        window.onload = updateClock;
+    </script>
+    <script>
+        setTimeout(function() {
+            window.location.reload();
+        }, 5000); // 5000 ms = 5 seconds
+    </script>
+</body>
+</html>

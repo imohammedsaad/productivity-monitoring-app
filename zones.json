@@ -1,0 +1,29 @@
+[
+  {
+    "x1": 24,
+    "y1": 28,
+    "x2": 272,
+    "y2": 382,
+    "label": "desk",
+    "type": "active",
+    "capacity": 3
+  },
+  {
+    "x1": 288,
+    "y1": 37,
+    "x2": 519,
+    "y2": 442,
+    "label": "meeting",
+    "type": "meeting",
+    "capacity": 10
+  },
+  {
+    "x1": 557,
+    "y1": 147,
+    "x2": 647,
+    "y2": 516,
+    "label": "cctv",
+    "type": "restricted",
+    "capacity": 1
+  }
+]

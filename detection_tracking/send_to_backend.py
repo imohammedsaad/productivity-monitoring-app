@@ -23,4 +23,7 @@ if __name__ == "__main__":
         {'id': 1, 'zone': 'Zone 1', 'timestamp': '2023-01-01T12:00:00'},
         {'id': 2, 'zone': 'Zone 2', 'timestamp': '2023-01-01T12:01:00'}
     ]
-    send_logs_batch(logs)
+    if logs:
+        send_logs_batch(logs)
+        for log in logs:
+            print("Logged:", json.dumps(log, indent=2))
